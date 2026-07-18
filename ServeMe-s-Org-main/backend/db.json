@@ -1,0 +1,374 @@
+{
+  "products": [
+    {
+      "id": "prod-1",
+      "name": "Margherita Pizza",
+      "price": 299,
+      "category": "Pizza",
+      "image": "",
+      "description": "Classic tomato sauce, fresh mozzarella, fresh basil, and extra virgin olive oil.",
+      "stock": 25,
+      "status": "Available",
+      "popular": true
+    },
+    {
+      "id": "prod-2",
+      "name": "Pepperoni Pizza",
+      "price": 399,
+      "category": "Pizza",
+      "image": "",
+      "description": "Classic tomato sauce, mozzarella cheese, and generous layers of spicy pepperoni slices.",
+      "stock": 18,
+      "status": "Out of Stock",
+      "popular": true
+    },
+    {
+      "id": "prod-3",
+      "name": "Garlic Bread",
+      "price": 129,
+      "category": "Appetizers",
+      "image": "",
+      "description": "Toasted baguette slices with garlic butter, fresh parsley, and melted cheese.",
+      "stock": 45,
+      "status": "Out of Stock",
+      "popular": false
+    },
+    {
+      "id": "prod-4",
+      "name": "Tiramisu",
+      "price": 199,
+      "category": "Beverages",
+      "image": "",
+      "description": "Traditional Italian dessert with layers of coffee-soaked ladyfingers and sweet mascarpone cream.",
+      "stock": 30,
+      "status": "Available",
+      "popular": true
+    }
+  ],
+  "orders": [
+    {
+      "id": "ORD-002",
+      "customerName": "Jane Smith",
+      "mobileNumber": "+1 987-654-3210",
+      "date": "2026-07-14 13:12",
+      "total": 8960,
+      "status": "Completed",
+      "items": [
+        {
+          "productId": "prod-2",
+          "name": "Pepperoni Pizza",
+          "quantity": 20,
+          "price": 399
+        },
+        {
+          "productId": "prod-4",
+          "name": "Tiramisu",
+          "quantity": 5,
+          "price": 196
+        }
+      ]
+    },
+    {
+      "id": "ORD-001",
+      "customerName": "John Doe",
+      "mobileNumber": "+1 234-567-8900",
+      "date": "2026-07-14 12:12",
+      "total": 3640,
+      "status": "Completed",
+      "items": [
+        {
+          "productId": "prod-1",
+          "name": "Margherita Pizza",
+          "quantity": 10,
+          "price": 299
+        },
+        {
+          "productId": "prod-3",
+          "name": "Garlic Bread",
+          "quantity": 5,
+          "price": 130
+        }
+      ]
+    }
+  ],
+  "insights": [
+    {
+      "id": "ins-low-ing-10-1784278263085",
+      "icon": "warning",
+      "message": "Inventory alert: Raw stock of 'Boba Tapioca Pearls' is running low (0 g left).",
+      "type": "warning"
+    },
+    {
+      "id": "ins-1",
+      "icon": "lightbulb",
+      "message": "Peak hours expected between 6 PM - 8 PM tonight. Consider increasing staff.",
+      "type": "info"
+    },
+    {
+      "id": "ins-2",
+      "icon": "trending_up",
+      "message": "'Spicy Ramen' is trending in your local area. Add to featured items?",
+      "type": "success"
+    },
+    {
+      "id": "ins-3",
+      "icon": "warning",
+      "message": "Inventory alert: Matcha Bubble Milk Tea pearls are running low (12% left).",
+      "type": "warning"
+    }
+  ],
+  "trends": [
+    {
+      "date": "Jul 9",
+      "revenue": 14500,
+      "orders": 12
+    },
+    {
+      "date": "Jul 10",
+      "revenue": 16200,
+      "orders": 15
+    },
+    {
+      "date": "Jul 11",
+      "revenue": 13900,
+      "orders": 11
+    },
+    {
+      "date": "Jul 12",
+      "revenue": 15100,
+      "orders": 14
+    },
+    {
+      "date": "Jul 13",
+      "revenue": 18400,
+      "orders": 19
+    },
+    {
+      "date": "Jul 14",
+      "revenue": 26800,
+      "orders": 28
+    },
+    {
+      "date": "Jul 15",
+      "revenue": 12600,
+      "orders": 10
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "camp-1",
+      "title": "Monsoon Hot Ramen Sale",
+      "discount": "15% Off",
+      "status": "Active",
+      "targetProduct": "Spicy Tonkotsu Ramen",
+      "clicks": 142,
+      "conversions": 38
+    },
+    {
+      "id": "camp-2",
+      "title": "Mid-week Sweet Sensation",
+      "discount": "Free Boba Topping",
+      "status": "Draft",
+      "targetProduct": "Matcha Bubble Milk Tea",
+      "clicks": 0,
+      "conversions": 0
+    }
+  ],
+  "ingredients": [
+    {
+      "id": "ing-1",
+      "name": "Pork Tonkotsu Broth Base",
+      "currentStock": 41,
+      "reorderLevel": 15,
+      "unit": "L",
+      "costPerUnit": 120,
+      "category": "Dairy & Liquids"
+    },
+    {
+      "id": "ing-2",
+      "name": "Ramen Wheat Noodles",
+      "currentStock": 11000,
+      "reorderLevel": 4000,
+      "unit": "g",
+      "costPerUnit": 0.15,
+      "category": "Dry Goods"
+    },
+    {
+      "id": "ing-3",
+      "name": "Chashu Pork Slices",
+      "currentStock": 160,
+      "reorderLevel": 50,
+      "unit": "pcs",
+      "costPerUnit": 45,
+      "category": "Proteins"
+    },
+    {
+      "id": "ing-4",
+      "name": "Ramen Soft Eggs",
+      "currentStock": 54,
+      "reorderLevel": 24,
+      "unit": "pcs",
+      "costPerUnit": 10,
+      "category": "Fresh Produce"
+    },
+    {
+      "id": "ing-5",
+      "name": "Japanese Curry Roux",
+      "currentStock": 1600,
+      "reorderLevel": 1000,
+      "unit": "g",
+      "costPerUnit": 0.35,
+      "category": "Dry Goods"
+    },
+    {
+      "id": "ing-6",
+      "name": "Chicken Cutlet Breast",
+      "currentStock": 15,
+      "reorderLevel": 12,
+      "unit": "pcs",
+      "costPerUnit": 60,
+      "category": "Proteins"
+    },
+    {
+      "id": "ing-7",
+      "name": "Gyoza Wrapper Sheets",
+      "currentStock": 290,
+      "reorderLevel": 100,
+      "unit": "pcs",
+      "costPerUnit": 2,
+      "category": "Dry Goods"
+    },
+    {
+      "id": "ing-8",
+      "name": "Minced Pork Filling",
+      "currentStock": 4350,
+      "reorderLevel": 1500,
+      "unit": "g",
+      "costPerUnit": 0.28,
+      "category": "Proteins"
+    },
+    {
+      "id": "ing-9",
+      "name": "Premium Matcha Powder",
+      "currentStock": 1125,
+      "reorderLevel": 400,
+      "unit": "g",
+      "costPerUnit": 1.8,
+      "category": "Dry Goods"
+    },
+    {
+      "id": "ing-10",
+      "name": "Boba Tapioca Pearls",
+      "currentStock": 0,
+      "reorderLevel": 1500,
+      "unit": "g",
+      "costPerUnit": 0.45,
+      "category": "Dry Goods"
+    },
+    {
+      "id": "ing-11",
+      "name": "Organic Whole Milk",
+      "currentStock": 26.75,
+      "reorderLevel": 8,
+      "unit": "L",
+      "costPerUnit": 65,
+      "category": "Dairy & Liquids"
+    }
+  ],
+  "recipes": [
+    {
+      "productId": "prod-1",
+      "ingredientId": "ing-1",
+      "quantityRequired": 0.4
+    },
+    {
+      "productId": "prod-1",
+      "ingredientId": "ing-2",
+      "quantityRequired": 150
+    },
+    {
+      "productId": "prod-1",
+      "ingredientId": "ing-3",
+      "quantityRequired": 2
+    },
+    {
+      "productId": "prod-1",
+      "ingredientId": "ing-4",
+      "quantityRequired": 1
+    },
+    {
+      "productId": "prod-2",
+      "ingredientId": "ing-5",
+      "quantityRequired": 80
+    },
+    {
+      "productId": "prod-2",
+      "ingredientId": "ing-6",
+      "quantityRequired": 1
+    },
+    {
+      "productId": "prod-3",
+      "ingredientId": "ing-7",
+      "quantityRequired": 6
+    },
+    {
+      "productId": "prod-3",
+      "ingredientId": "ing-8",
+      "quantityRequired": 90
+    },
+    {
+      "productId": "prod-4",
+      "ingredientId": "ing-9",
+      "quantityRequired": 15
+    },
+    {
+      "productId": "prod-4",
+      "ingredientId": "ing-10",
+      "quantityRequired": 40
+    },
+    {
+      "productId": "prod-4",
+      "ingredientId": "ing-11",
+      "quantityRequired": 0.25
+    }
+  ],
+  "wastageLogs": [
+    {
+      "id": "wast-1",
+      "ingredientId": "ing-11",
+      "ingredientName": "Organic Whole Milk",
+      "quantity": 2,
+      "unit": "L",
+      "reason": "Expired",
+      "timestamp": "Oct 11, 04:30 PM",
+      "loggedBy": "Chef Akira"
+    },
+    {
+      "id": "wast-2",
+      "ingredientId": "ing-4",
+      "ingredientName": "Ramen Soft Eggs",
+      "quantity": 4,
+      "unit": "pcs",
+      "reason": "Dropped",
+      "timestamp": "Oct 12, 09:10 AM",
+      "loggedBy": "Sous Chef Jin"
+    }
+  ],
+  "storeActive": true,
+  "deductedOrderIds": [
+    "#ORD-8290",
+    "#ORD-8289",
+    "ORD-002",
+    "ORD-001"
+  ],
+  "paymentModes": [
+    {
+      "id": "pay-qr",
+      "name": "QR Code Payment",
+      "type": "Digital",
+      "status": "Active",
+      "surchargePercentage": 0,
+      "discountPercentage": 0
+    }
+  ]
+}

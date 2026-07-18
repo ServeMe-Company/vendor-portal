@@ -1,0 +1,6 @@
+{
+  "name": "ServeMe Vendor Portal",
+  "description": "A high-performance vendor portal and operations dashboard for kitchen and restaurant management, featuring real-time orders, dynamic catalog control, analytics, and instant payment links.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
