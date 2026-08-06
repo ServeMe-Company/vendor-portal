@@ -1,19 +1,22 @@
 import React from 'react';
-import { LayoutDashboard, UtensilsCrossed, Warehouse, BarChart3, QrCode, Tv } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, Warehouse, BarChart3, QrCode, Tv, Bell, Receipt } from 'lucide-react';
 
 interface HeaderProps {
   storeActive: boolean;
   setStoreActive: (active: boolean) => void;
   currentTab: string;
   setCurrentTab: (tab: string) => void;
+  onOpenTaxSettings?: () => void;
 }
 
-export default function Header({ storeActive, setStoreActive, currentTab, setCurrentTab }: HeaderProps) {
+export default function Header({ storeActive, setStoreActive, currentTab, setCurrentTab, onOpenTaxSettings }: HeaderProps) {
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'reports', label: 'Sales Report', icon: BarChart3 },
     { id: 'catalog', label: 'Catalog', icon: UtensilsCrossed },
     { id: 'inventory', label: 'Inventory', icon: Warehouse },
-    { id: 'reports', label: 'Report', icon: BarChart3 },
+    { id: 'tables', label: 'Tables', icon: QrCode },
+    { id: 'requests', label: 'Requests', icon: Bell },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   ];
 
   return (

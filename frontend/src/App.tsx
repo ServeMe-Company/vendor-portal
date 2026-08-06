@@ -10,6 +10,9 @@ import Dashboard from './components/Dashboard';
 import Catalog from './components/Catalog';
 import Reports from './components/Reports';
 import Inventory from './components/Inventory';
+import TableManagement from './components/TableManagement';
+import ServiceRequests from './components/ServiceRequests';
+import TaxSettingsModal from './components/TaxSettingsModal';
 
 import { 
   INITIAL_PRODUCTS, 
@@ -27,7 +30,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 
 export default function App() {
   // Shared global state
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  const [currentTab, setCurrentTab] = useState<string>('reports');
   const [storeActive, setStoreActive] = useState<boolean>(true);
   
   const [products, setProducts] = useState<MenuItem[]>(INITIAL_PRODUCTS);
@@ -42,8 +45,9 @@ export default function App() {
   const [wastageLogs, setWastageLogs] = useState<WastageLog[]>(INITIAL_WASTAGE);
   const [deductedOrderIds, setDeductedOrderIds] = useState<string[]>(['#ORD-8290', '#ORD-8289']); // Pre-completed seed orders already deducted
 
-  // Payment modes state
+  // Payment modes & Tax Settings state
   const [paymentModes, setPaymentModes] = useState<PaymentMode[]>(INITIAL_PAYMENT_MODES);
+  const [isTaxSettingsOpen, setIsTaxSettingsOpen] = useState<boolean>(false);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -94,6 +98,41 @@ export default function App() {
 
   useEffect(() => {
     loadState();
+  }, []);
+
+  // Real-time live synchronization for kitchen & order status updates
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncLiveDatabase = async () => {
+      try {
+        const res = await fetch('/api/db');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (isMounted && data && Array.isArray(data.orders)) {
+          setOrders(prevOrders => {
+            const currentStr = JSON.stringify(prevOrders);
+            const nextStr = JSON.stringify(data.orders);
+            if (currentStr !== nextStr) {
+              return data.orders;
+            }
+            return prevOrders;
+          });
+        }
+      } catch (err) {
+        console.debug('Live sync check:', err);
+      }
+    };
+
+    const intervalId = setInterval(syncLiveDatabase, 3000);
+    window.addEventListener('focus', syncLiveDatabase);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener('focus', syncLiveDatabase);
+    };
   }, []);
 
   // Save state to DB on modification
@@ -270,6 +309,7 @@ export default function App() {
         setStoreActive={setStoreActive} 
         currentTab={currentTab} 
         setCurrentTab={setCurrentTab} 
+        onOpenTaxSettings={() => setIsTaxSettingsOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -324,6 +364,18 @@ export default function App() {
             </div>
           )}
 
+          {currentTab === 'tables' && (
+            <div className="animate-fade-in">
+              <TableManagement />
+            </div>
+          )}
+
+          {currentTab === 'requests' && (
+            <div className="animate-fade-in">
+              <ServiceRequests />
+            </div>
+          )}
+
           {currentTab === 'reports' && (
             <div className="animate-fade-in">
               <Reports 
@@ -331,6 +383,7 @@ export default function App() {
                 setOrders={setOrders}
                 products={products}
                 trends={trends}
+                onOpenTaxSettings={() => setIsTaxSettingsOpen(true)}
               />
             </div>
           )}
@@ -341,6 +394,12 @@ export default function App() {
 
       {/* Bottom Navigation Bar for Mobile */}
       <BottomNavBar currentTab={currentTab} setCurrentTab={setCurrentTab} />
+
+      {/* Tax & Charges Settings Edit Modal */}
+      <TaxSettingsModal 
+        isOpen={isTaxSettingsOpen} 
+        onClose={() => setIsTaxSettingsOpen(false)} 
+      />
 
     </div>
   );

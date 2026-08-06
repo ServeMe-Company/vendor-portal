@@ -16,10 +16,14 @@ import {
   Clock,
   Plus,
   ShoppingCart,
-  CreditCard
+  CreditCard,
+  Loader2,
+  Edit3,
+  Printer
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Order, MenuItem, StoreInsight, DailyTrend, MarketingCampaign } from '../types';
+import EditBillPrintModal from './EditBillPrintModal';
 
 interface DashboardProps {
   orders: Order[];
@@ -55,6 +59,45 @@ export default function Dashboard({
   const [newCampaignProduct, setNewCampaignProduct] = useState(products[0]?.name || '');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Payment collection modal state
+  const [payMethod, setPayMethod] = useState<'Cash' | 'UPI' | 'Card'>('Cash');
+  const [transRef, setTransRef] = useState('');
+  const [markingPaid, setMarkingPaid] = useState(false);
+
+  // Edit Bill Print Modal state
+  const [isEditBillOpen, setIsEditBillOpen] = useState(false);
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedOrder) return;
+    setMarkingPaid(true);
+
+    try {
+      const res = await fetch(`/api/vendor/orders/${selectedOrder.id}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentStatus: 'Paid',
+          paymentMethod: payMethod,
+          transactionRef: transRef,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update payment status');
+      }
+
+      const updatedOrder: Order = await res.json();
+      setSelectedOrder(updatedOrder);
+      setOrders(prev => prev.map(o => (o.id === updatedOrder.id ? updatedOrder : o)));
+      triggerToast(`Order ${updatedOrder.id} marked as Paid (${payMethod})!`);
+      setTransRef('');
+    } catch (err: any) {
+      triggerToast(`Error: ${err.message}`);
+    } finally {
+      setMarkingPaid(false);
+    }
+  };
+
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -62,17 +105,19 @@ export default function Dashboard({
     }, 4000);
   };
 
-  // Calculate stats dynamically based on actual state matching the mockup values on load
-  const completedOrders = orders.filter(o => o.status === 'Completed');
-  const totalOrders = completedOrders.length;
-  
-  // Base 11,000 + completed orders totals (420 + 1180 = 1600 on load) = exactly 12,600.00
-  const totalRevenue = 11000 + completedOrders.reduce((sum, o) => sum + o.total, 0);
+  // Calculate paid orders & revenue dynamically based on real order database
+  const paidOrders = orders.filter((order) => {
+    if (order.status === 'Cancelled' || order.status === 'Canceled') return false;
+    if (order.paymentStatus) return order.paymentStatus === 'Paid';
+    return order.status === 'Completed'; // fallback for legacy orders
+  });
 
-  const activeProductsCount = products.length; // 4 products on load
-  
-  // Customers baseline: 4 on load, incrementing as more orders are completed
-  const customersCount = 4 + (completedOrders.length - 2);
+  const totalOrders = orders.filter(o => o.status !== 'Cancelled' && o.status !== 'Canceled').length;
+  const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+  const activeProductsCount = products.length;
+  const uniqueCustomers = new Set(orders.map(o => o.customerName || o.mobileNumber || 'Guest'));
+  const customersCount = uniqueCustomers.size > 0 ? uniqueCustomers.size : paidOrders.length;
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
@@ -142,28 +187,47 @@ export default function Dashboard({
     a.setAttribute('href', url);
     a.setAttribute('download', `serveme_orders_${new Date().toISOString().slice(0, 10)}.csv`);
     a.click();
-  };  // Generate trend data matching the mockup exactly, plus any new Completed orders' revenue added to the last day (Jul 15)
-  const baseTrends = [
-    { date: 'Jul 9', revenue: 0 },
-    { date: 'Jul 10', revenue: 0 },
-    { date: 'Jul 11', revenue: 0 },
-    { date: 'Jul 12', revenue: 0 },
-    { date: 'Jul 13', revenue: 0 },
-    { date: 'Jul 14', revenue: 12600 },
-    { date: 'Jul 15', revenue: 0 }
-  ];
+  };
 
-  const initialCompletedIds = ['#ORD-8290', '#ORD-8289'];
-  const newCompletedRevenue = orders
-    .filter(o => o.status === 'Completed' && !initialCompletedIds.includes(o.id))
-    .reduce((sum, o) => sum + o.total, 0);
+  // Generate real 7-day revenue trend data for the AreaChart graph dynamically from paid orders
+  const dynamicTrends = React.useMemo(() => {
+    const days: { date: string; fullDate: string; revenue: number }[] = [];
+    const now = new Date();
 
-  const dynamicTrends = baseTrends.map(t => {
-    if (t.date === 'Jul 15') {
-      return { ...t, revenue: t.revenue + newCompletedRevenue };
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const keyDate = `${yyyy}-${mm}-${dd}`;
+
+      days.push({
+        date: dateStr,
+        fullDate: keyDate,
+        revenue: 0,
+      });
     }
-    return t;
-  });
+
+    paidOrders.forEach((order) => {
+      if (!order.date) return;
+      const orderDateObj = new Date(order.date);
+      if (isNaN(orderDateObj.getTime())) return;
+
+      const yyyy = orderDateObj.getFullYear();
+      const mm = String(orderDateObj.getMonth() + 1).padStart(2, '0');
+      const dd = String(orderDateObj.getDate()).padStart(2, '0');
+      const orderKeyDate = `${yyyy}-${mm}-${dd}`;
+
+      const matchedDay = days.find((d) => d.fullDate === orderKeyDate);
+      if (matchedDay) {
+        matchedDay.revenue = Number((matchedDay.revenue + (order.total || 0)).toFixed(2));
+      }
+    });
+
+    return days;
+  }, [orders]);
 
   return (
     <div className="pt-4 pb-24 md:pb-8 max-w-7xl mx-auto px-4 md:px-8 select-none relative">
@@ -443,7 +507,7 @@ export default function Dashboard({
                 <span className="text-sm text-on-surface-variant font-label-md">{selectedOrder.date}</span>
               </div>
               <div className="flex justify-between border-b border-outline-variant/50 pb-2">
-                <span className="text-xs font-semibold text-on-surface-variant uppercase font-label-sm">Status</span>
+                <span className="text-xs font-semibold text-on-surface-variant uppercase font-label-sm">Kitchen Status</span>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
                   selectedOrder.status === 'Preparing' 
                     ? 'bg-amber-50 text-amber-700 border-amber-200'
@@ -453,6 +517,96 @@ export default function Dashboard({
                 }`}>
                   {selectedOrder.status}
                 </span>
+              </div>
+
+              {/* Payment Info & Collection Section */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider font-label-sm">Payment Status</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                      selectedOrder.paymentStatus === 'Paid'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border-amber-300'
+                    }`}>
+                      {selectedOrder.paymentStatus || 'Unpaid'}
+                    </span>
+                  </div>
+                  {selectedOrder.paymentStatus === 'Paid' && (
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Paid At: {selectedOrder.paidAt ? new Date(selectedOrder.paidAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : selectedOrder.date}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold text-slate-500">Payment Method:</span>
+                  <span className="font-bold text-slate-800">
+                    {selectedOrder.paymentMethod || selectedOrder.paymentMode || (selectedOrder.paymentStatus === 'Paid' ? 'Cash' : '-')}
+                  </span>
+                </div>
+
+                {selectedOrder.transactionRef && (
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold text-slate-500">Transaction Ref:</span>
+                    <span className="font-mono font-bold text-slate-800">{selectedOrder.transactionRef}</span>
+                  </div>
+                )}
+
+                {/* Collect Payment Section for Unpaid Orders */}
+                {selectedOrder.paymentStatus !== 'Paid' && (
+                  <div className="pt-2 border-t border-slate-200/80 space-y-3">
+                    <p className="text-xs font-bold text-slate-700">Collect Counter Payment:</p>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Cash', 'UPI', 'Card'] as const).map(method => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setPayMethod(method)}
+                          className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                            payMethod === method
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {method === 'Cash' ? '💵 Cash' : method === 'UPI' ? '📱 UPI' : '💳 Card'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {payMethod === 'UPI' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          UPI / Transaction Ref ID (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={transRef}
+                          onChange={e => setTransRef(e.target.value)}
+                          placeholder="e.g. 123456789012"
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={markingPaid}
+                      onClick={handleMarkAsPaid}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {markingPaid ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          Mark as Paid ({payMethod})
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -472,13 +626,45 @@ export default function Dashboard({
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
-                <span className="text-sm font-bold text-on-surface font-label-md">Total Paid Amount</span>
-                <span className="text-lg font-extrabold text-primary font-headline-md">₹{selectedOrder.total.toLocaleString()}</span>
-              </div>
+              {(() => {
+                const subtotal = selectedOrder.subtotal ?? selectedOrder.items.reduce((sum, i) => sum + (i.quantity * i.price), 0);
+                const gst = selectedOrder.gstAmount ?? Number(((subtotal * 18) / 100).toFixed(2));
+                const service = selectedOrder.serviceChargeAmount ?? Number(((subtotal * 5) / 100).toFixed(2));
+                const total = selectedOrder.total ?? Number((subtotal + gst + service).toFixed(2));
+
+                return (
+                  <div className="space-y-1.5 pt-3 border-t border-slate-200 text-xs">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Subtotal</span>
+                      <span className="font-semibold font-mono">₹{subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>GST {selectedOrder.gstPercentage !== undefined ? `(${selectedOrder.gstPercentage}%)` : '(18%)'}</span>
+                      <span className="font-semibold font-mono">₹{gst.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Service {selectedOrder.serviceChargePercentage !== undefined ? `(${selectedOrder.serviceChargePercentage}%)` : '(5%)'}</span>
+                      <span className="font-semibold font-mono">₹{service.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                      <span className="text-sm font-bold text-slate-900">Total Paid Amount</span>
+                      <span className="text-lg font-extrabold text-orange-600">₹{total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
-            <div className="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex gap-3">
+            <div className="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex flex-wrap sm:flex-nowrap gap-3">
+              <button 
+                onClick={() => setIsEditBillOpen(true)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 py-2 rounded text-xs font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                title="Edit Customer Name, Address & Bill Info before printing"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-orange-500" />
+                Edit Bill Details
+              </button>
+
               {selectedOrder.status === 'Preparing' && (
                 <>
                   <button 
@@ -500,7 +686,7 @@ export default function Dashboard({
               {selectedOrder.status !== 'Preparing' && (
                 <button 
                   onClick={() => setSelectedOrder(null)}
-                  className="w-full bg-secondary text-white py-2 rounded text-xs font-bold transition-opacity hover:opacity-90 cursor-pointer"
+                  className="px-5 bg-secondary text-white py-2 rounded text-xs font-bold transition-opacity hover:opacity-90 cursor-pointer"
                 >
                   Close Window
                 </button>
@@ -509,6 +695,17 @@ export default function Dashboard({
           </div>
         </div>
       )}
+
+      {/* Edit Bill & Print Custom Modal */}
+      <EditBillPrintModal 
+        isOpen={isEditBillOpen}
+        onClose={() => setIsEditBillOpen(false)}
+        order={selectedOrder}
+        onOrderUpdated={(updated) => {
+          setSelectedOrder(updated);
+          setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+        }}
+      />
 
       {/* Campaign Launcher Modal */}
       {isCampaignModalOpen && (

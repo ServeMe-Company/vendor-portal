@@ -3,11 +3,26 @@ export interface MenuItem {
   name: string;
   price: number;
   category: string;
+  subcategory?: string;
+  foodType?: 'Veg' | 'Non-Veg';
+  isVeg?: boolean;
+  gstIncluded?: boolean;
+  preparationTime?: string;
   image: string;
   description: string;
   stock: number;
   status: 'Available' | 'Out of Stock' | 'Draft';
-  popular: boolean;
+  popular?: boolean;
+  featured?: boolean;
+  displayOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CategoryItem {
+  id?: string;
+  name: string;
+  displayOrder: number;
 }
 
 export interface OrderItem {
@@ -19,13 +34,26 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  orderNumber?: string;
   customerName: string;
   mobileNumber?: string;
   date: string; // formatted date
   total: number;
-  status: 'Pending Payment' | 'Preparing' | 'Completed' | 'Cancelled';
+  subtotal?: number;
+  gstPercentage?: number;
+  gstAmount?: number;
+  serviceChargePercentage?: number;
+  serviceChargeAmount?: number;
+  status: 'Pending' | 'Accepted' | 'Preparing' | 'Ready' | 'Completed' | 'Cancelled' | string;
+  paymentStatus?: 'Unpaid' | 'Paid' | string;
+  paymentMethod?: 'Cash' | 'UPI' | 'Card' | string | null;
+  paidAt?: string;
+  transactionRef?: string;
   items: OrderItem[];
   paymentMode?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface StoreInsight {
@@ -85,5 +113,36 @@ export interface PaymentMode {
   status: 'Active' | 'Inactive';
   surchargePercentage: number;
   discountPercentage: number;
+}
+
+export interface RestaurantTable {
+  id: string;
+  restaurantId: string;
+  tableNumber: number;
+  tableName: string;
+  capacity: number;
+  qrToken: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ServiceRequest {
+  id: string;
+  qrToken?: string;
+  tableId: string;
+  tableNumber: number;
+  tableName?: string;
+  requestType: 'Call Waiter' | 'Water Request' | 'Bill Request' | 'Cleaning' | string;
+  message?: string;
+  status: 'Pending' | 'Accepted' | 'Completed' | 'Cancelled';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TaxSettings {
+  enableGst: boolean;
+  gstPercentage: number;
+  enableServiceCharge: boolean;
+  serviceChargePercentage: number;
 }
 

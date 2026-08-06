@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, UtensilsCrossed, BarChart3, Warehouse } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, BarChart3, Warehouse, QrCode, Bell } from 'lucide-react';
 
 interface BottomNavBarProps {
   currentTab: string;
@@ -8,10 +8,12 @@ interface BottomNavBarProps {
 
 export default function BottomNavBar({ currentTab, setCurrentTab }: BottomNavBarProps) {
   const navItems = [
-    { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
+    { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'catalog', label: 'Items', icon: UtensilsCrossed },
     { id: 'inventory', label: 'Stock', icon: Warehouse },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'tables', label: 'Tables', icon: QrCode },
+    { id: 'requests', label: 'Requests', icon: Bell },
+    { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
   ];
 
   return (

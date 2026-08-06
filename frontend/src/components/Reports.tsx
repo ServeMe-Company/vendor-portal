@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Search, Trash2, Download, X, Printer, Calendar, TrendingUp, DollarSign, ShoppingBag, Percent, Clock } from 'lucide-react';
+import { Search, Trash2, Download, X, Printer, Calendar, TrendingUp, DollarSign, ShoppingBag, Percent, Clock, CheckCircle, Loader2, CreditCard, Receipt, Edit3 } from 'lucide-react';
 import { Order, MenuItem, DailyTrend } from '../types';
+import EditBillPrintModal from './EditBillPrintModal';
 
 interface ReportsProps {
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   products: MenuItem[];
   trends: DailyTrend[];
+  onOpenTaxSettings?: () => void;
 }
 
 type DatePreset = 'all' | 'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'custom';
@@ -78,16 +80,84 @@ const endOfDay = (date: Date) => {
   return d;
 };
 
-export default function Reports({ orders, setOrders, products, trends }: ReportsProps) {
+export default function Reports({ orders, setOrders, products, trends, onOpenTaxSettings }: ReportsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showConfirmDeleteAll, setShowConfirmDeleteAll] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   
-  // Date range state
-  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  // Date range state - defaults to 'today' so each new day starts with fresh details
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
+
+  // Live Daily Reset Timer (countdown until midnight next day)
+  const [timeUntilReset, setTimeUntilReset] = useState<string>('');
+
+  React.useEffect(() => {
+    const updateResetTimer = () => {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0); // 12:00 AM next day
+
+      const diffMs = midnight.getTime() - now.getTime();
+
+      if (diffMs <= 0) {
+        setTimeUntilReset('00h 00m 00s');
+        return;
+      }
+
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+      const formatted = `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+      setTimeUntilReset(formatted);
+    };
+
+    updateResetTimer();
+    const timerId = setInterval(updateResetTimer, 1000);
+
+    return () => clearInterval(timerId);
+  }, []);
+
+  // Payment Collection Modal State
+  const [payMethod, setPayMethod] = useState<'Cash' | 'UPI' | 'Card'>('Cash');
+  const [transRef, setTransRef] = useState('');
+  const [markingPaid, setMarkingPaid] = useState(false);
+
+  // Edit Bill & Print Modal state
+  const [isEditBillOpen, setIsEditBillOpen] = useState(false);
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedOrder) return;
+    setMarkingPaid(true);
+
+    try {
+      const res = await fetch(`/api/vendor/orders/${selectedOrder.id}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentStatus: 'Paid',
+          paymentMethod: payMethod,
+          transactionRef: transRef,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update payment status');
+      }
+
+      const updatedOrder: Order = await res.json();
+      setSelectedOrder(updatedOrder);
+      setOrders(prev => prev.map(o => (o.id === updatedOrder.id ? updatedOrder : o)));
+      setTransRef('');
+    } catch (err: any) {
+      alert(`Error marking payment: ${err.message}`);
+    } finally {
+      setMarkingPaid(false);
+    }
+  };
 
   // Print invoice function
   const handlePrint = () => {
@@ -311,19 +381,33 @@ export default function Reports({ orders, setOrders, products, trends }: Reports
     return matchesId || matchesName || matchesMobile;
   });
 
-  // Calculate timeframe-based performance metrics
-  const totalRevenue = dateFilteredOrders.reduce((sum, order) => {
-    if (order.status !== 'Cancelled') {
-      return sum + order.total;
-    }
-    return sum;
-  }, 0);
+  // Reports count revenue ONLY from paymentStatus === 'Paid'
+  const paidOrders = dateFilteredOrders.filter((order) => {
+    if (order.status === 'Cancelled' || order.status === 'Canceled') return false;
+    if (order.paymentStatus) return order.paymentStatus === 'Paid';
+    return order.status === 'Completed'; // fallback for legacy orders
+  });
+
+  const totalRevenue = paidOrders.reduce((sum, order) => sum + order.total, 0);
+
+  // Group paid revenue by Cash, UPI, and Card
+  const cashRevenue = paidOrders
+    .filter((o) => (o.paymentMethod || o.paymentMode || 'Cash').toLowerCase().includes('cash'))
+    .reduce((sum, o) => sum + o.total, 0);
+
+  const upiRevenue = paidOrders
+    .filter((o) => (o.paymentMethod || o.paymentMode || '').toLowerCase().includes('upi'))
+    .reduce((sum, o) => sum + o.total, 0);
+
+  const cardRevenue = paidOrders
+    .filter((o) => (o.paymentMethod || o.paymentMode || '').toLowerCase().includes('card'))
+    .reduce((sum, o) => sum + o.total, 0);
 
   const totalOrdersCount = dateFilteredOrders.length;
   const completedOrdersCount = dateFilteredOrders.filter(o => o.status === 'Completed').length;
   const preparingOrdersCount = dateFilteredOrders.filter(o => o.status === 'Preparing').length;
   const cancelledOrdersCount = dateFilteredOrders.filter(o => o.status === 'Cancelled').length;
-  const pendingPaymentOrdersCount = dateFilteredOrders.filter(o => o.status === 'Pending Payment').length;
+  const pendingPaymentOrdersCount = dateFilteredOrders.filter(o => o.paymentStatus !== 'Paid').length;
 
   const averageOrderValue = totalOrdersCount > 0 ? totalRevenue / totalOrdersCount : 0;
   const cancellationRate = totalOrdersCount > 0 ? (cancelledOrdersCount / totalOrdersCount) * 100 : 0;
@@ -407,6 +491,16 @@ export default function Reports({ orders, setOrders, products, trends }: Reports
         
         {/* Buttons */}
         <div className="flex items-center gap-3">
+          {onOpenTaxSettings && (
+            <button
+              onClick={onOpenTaxSettings}
+              className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-3.5 py-2 rounded-lg text-sm font-semibold cursor-pointer shadow-xs transition-colors"
+              title="Edit GST Tax & Service Charge Settings"
+            >
+              <Receipt className="w-4 h-4 text-orange-500" />
+              Tax & Charges
+            </button>
+          )}
           <button
             onClick={() => setShowConfirmDeleteAll(true)}
             disabled={orders.length === 0}
@@ -544,6 +638,33 @@ export default function Reports({ orders, setOrders, products, trends }: Reports
           <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600 shrink-0">
             <Percent className="w-5 h-5" />
           </div>
+        </div>
+      </div>
+
+      {/* Payment Method Breakdown (Cash, UPI, Card) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 no-print">
+        <div className="bg-emerald-50/70 border border-emerald-200 p-4 rounded-xl flex items-center justify-between shadow-xs">
+          <div>
+            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">💵 Cash Revenue</span>
+            <h4 className="text-xl font-extrabold text-emerald-950 mt-0.5">₹{cashRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+          </div>
+          <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg">Cash</span>
+        </div>
+
+        <div className="bg-purple-50/70 border border-purple-200 p-4 rounded-xl flex items-center justify-between shadow-xs">
+          <div>
+            <span className="text-xs font-bold text-purple-800 uppercase tracking-wider">📱 UPI Revenue</span>
+            <h4 className="text-xl font-extrabold text-purple-950 mt-0.5">₹{upiRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+          </div>
+          <span className="text-xs font-bold bg-purple-100 text-purple-800 px-2.5 py-1 rounded-lg">UPI</span>
+        </div>
+
+        <div className="bg-blue-50/70 border border-blue-200 p-4 rounded-xl flex items-center justify-between shadow-xs">
+          <div>
+            <span className="text-xs font-bold text-blue-800 uppercase tracking-wider">💳 Card Revenue</span>
+            <h4 className="text-xl font-extrabold text-blue-950 mt-0.5">₹{cardRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+          </div>
+          <span className="text-xs font-bold bg-blue-100 text-blue-800 px-2.5 py-1 rounded-lg">Card</span>
         </div>
       </div>
 
@@ -736,11 +857,9 @@ export default function Reports({ orders, setOrders, products, trends }: Reports
                 </span>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kitchen Status</span>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                  selectedOrder.status === 'Pending Payment'
-                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                    : selectedOrder.status === 'Preparing' 
+                  selectedOrder.status === 'Preparing' 
                     ? 'bg-amber-50 text-amber-700 border-amber-200'
                     : selectedOrder.status === 'Completed'
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -748,6 +867,96 @@ export default function Reports({ orders, setOrders, products, trends }: Reports
                 }`}>
                   {selectedOrder.status}
                 </span>
+              </div>
+
+              {/* Payment Info & Collection Section */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider font-label-sm">Payment Status</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                      selectedOrder.paymentStatus === 'Paid'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border-amber-300'
+                    }`}>
+                      {selectedOrder.paymentStatus || 'Unpaid'}
+                    </span>
+                  </div>
+                  {selectedOrder.paymentStatus === 'Paid' && (
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Paid At: {selectedOrder.paidAt ? new Date(selectedOrder.paidAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : selectedOrder.date}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold text-slate-500">Payment Method:</span>
+                  <span className="font-bold text-slate-800">
+                    {selectedOrder.paymentMethod || selectedOrder.paymentMode || (selectedOrder.paymentStatus === 'Paid' ? 'Cash' : '-')}
+                  </span>
+                </div>
+
+                {selectedOrder.transactionRef && (
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold text-slate-500">Transaction Ref:</span>
+                    <span className="font-mono font-bold text-slate-800">{selectedOrder.transactionRef}</span>
+                  </div>
+                )}
+
+                {/* Collect Payment Section for Unpaid Orders */}
+                {selectedOrder.paymentStatus !== 'Paid' && (
+                  <div className="pt-2 border-t border-slate-200 space-y-3">
+                    <p className="text-xs font-bold text-slate-700">Collect Counter Payment:</p>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Cash', 'UPI', 'Card'] as const).map(method => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setPayMethod(method)}
+                          className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                            payMethod === method
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {method === 'Cash' ? '💵 Cash' : method === 'UPI' ? '📱 UPI' : '💳 Card'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {payMethod === 'UPI' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          UPI / Transaction Ref ID (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={transRef}
+                          onChange={e => setTransRef(e.target.value)}
+                          placeholder="e.g. 123456789012"
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={markingPaid}
+                      onClick={handleMarkAsPaid}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {markingPaid ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          Mark as Paid ({payMethod})
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -767,23 +976,54 @@ export default function Reports({ orders, setOrders, products, trends }: Reports
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-3 border-t border-slate-100">
-                <span className="text-sm font-bold text-slate-800">Total Paid Amount</span>
-                <span className="text-xl font-extrabold text-[#f97316]">₹{selectedOrder.total.toFixed(2)}</span>
-              </div>
+              {(() => {
+                const subtotal = selectedOrder.subtotal ?? selectedOrder.items.reduce((sum, i) => sum + (i.quantity * i.price), 0);
+                const gst = selectedOrder.gstAmount ?? Number(((subtotal * 18) / 100).toFixed(2));
+                const service = selectedOrder.serviceChargeAmount ?? Number(((subtotal * 5) / 100).toFixed(2));
+                const total = selectedOrder.total ?? Number((subtotal + gst + service).toFixed(2));
+
+                return (
+                  <div className="space-y-1.5 pt-3 border-t border-slate-100 text-xs">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Subtotal</span>
+                      <span className="font-semibold font-mono">₹{subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>GST {selectedOrder.gstPercentage !== undefined ? `(${selectedOrder.gstPercentage}%)` : '(18%)'}</span>
+                      <span className="font-semibold font-mono">₹{gst.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Service {selectedOrder.serviceChargePercentage !== undefined ? `(${selectedOrder.serviceChargePercentage}%)` : '(5%)'}</span>
+                      <span className="font-semibold font-mono">₹{service.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                      <span className="text-sm font-bold text-slate-800">Total Paid Amount</span>
+                      <span className="text-xl font-extrabold text-[#f97316]">₹{total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 shrink-0">
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-wrap sm:flex-nowrap gap-3 shrink-0">
+              <button 
+                onClick={() => setIsEditBillOpen(true)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 py-2.5 rounded-lg text-sm font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
+                title="Edit Customer Name, Address & Bill Info before printing"
+              >
+                <Edit3 className="w-4 h-4 text-orange-500" />
+                Edit Bill Details
+              </button>
               <button 
                 onClick={handlePrint}
                 className="flex-1 bg-[#f97316] hover:bg-[#ea580c] text-white py-2.5 rounded-lg text-sm font-bold transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs"
               >
                 <Printer className="w-4 h-4" />
-                Print Bill
+                Print Quick Bill
               </button>
               <button 
                 onClick={() => setSelectedOrder(null)}
-                className="flex-1 bg-slate-800 hover:bg-slate-950 text-white py-2.5 rounded-lg text-sm font-bold transition-colors cursor-pointer"
+                className="px-5 bg-slate-800 hover:bg-slate-950 text-white py-2.5 rounded-lg text-sm font-bold transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -791,6 +1031,17 @@ export default function Reports({ orders, setOrders, products, trends }: Reports
           </div>
         </div>
       )}
+
+      {/* Edit Bill & Print Custom Modal */}
+      <EditBillPrintModal 
+        isOpen={isEditBillOpen}
+        onClose={() => setIsEditBillOpen(false)}
+        order={selectedOrder}
+        onOrderUpdated={(updated) => {
+          setSelectedOrder(updated);
+          setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+        }}
+      />
 
       {/* Printable Receipt Section (Hidden on screen, optimized for printer) */}
       {selectedOrder && (
@@ -853,12 +1104,33 @@ export default function Reports({ orders, setOrders, products, trends }: Reports
             </table>
           </div>
 
-          <div className="py-4 space-y-1.5 text-sm">
-            <div className="flex justify-between font-bold text-base border-t border-dashed border-neutral-400 pt-2">
-              <span>GRAND TOTAL:</span>
-              <span>₹{selectedOrder.total.toFixed(2)}</span>
-            </div>
-          </div>
+          {(() => {
+            const subtotal = selectedOrder.subtotal ?? selectedOrder.items.reduce((sum, i) => sum + (i.quantity * i.price), 0);
+            const gst = selectedOrder.gstAmount ?? Number(((subtotal * 18) / 100).toFixed(2));
+            const service = selectedOrder.serviceChargeAmount ?? Number(((subtotal * 5) / 100).toFixed(2));
+            const total = selectedOrder.total ?? Number((subtotal + gst + service).toFixed(2));
+
+            return (
+              <div className="py-3 space-y-1 text-xs">
+                <div className="flex justify-between text-neutral-700">
+                  <span>Subtotal:</span>
+                  <span className="font-mono">₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-700">
+                  <span>GST {selectedOrder.gstPercentage !== undefined ? `(${selectedOrder.gstPercentage}%)` : '(18%)'}:</span>
+                  <span className="font-mono">₹{gst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-700">
+                  <span>Service {selectedOrder.serviceChargePercentage !== undefined ? `(${selectedOrder.serviceChargePercentage}%)` : '(5%)'}:</span>
+                  <span className="font-mono">₹{service.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-sm border-t border-dashed border-neutral-400 pt-2 mt-2">
+                  <span>GRAND TOTAL:</span>
+                  <span>₹{total.toFixed(2)}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="text-center pt-8 pb-4 space-y-1 text-xs border-t border-dashed border-neutral-400 mt-6">
             <p className="font-semibold">Thank you for dining with serveMe!</p>
