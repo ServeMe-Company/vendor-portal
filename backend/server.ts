@@ -165,22 +165,31 @@ async function readDB() {
   if (pool) {
     try {
       const res = await pool.query("SELECT data FROM store_data WHERE id = 1");
-      if (res.rows.length > 0) {
+      if (res.rows && res.rows.length > 0) {
         return res.rows[0].data;
       }
     } catch (err) {
-      console.error("Error reading from PostgreSQL database:", err);
-      throw err;
+      console.error("Error reading from PostgreSQL database, falling back to db.json:", err);
     }
   }
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, "utf-8");
-      return JSON.parse(raw);
+
+  const possiblePaths = [
+    DB_FILE,
+    path.join(process.cwd(), "backend", "db.json"),
+    path.join(process.cwd(), "db.json")
+  ];
+
+  for (const filePath of possiblePaths) {
+    try {
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, "utf-8");
+        return JSON.parse(raw);
+      }
+    } catch (err) {
+      console.error(`Error reading ${filePath}:`, err);
     }
-  } catch (err) {
-    console.error("Error reading db.json, returning empty object:", err);
   }
+
   return {};
 }
 
@@ -192,16 +201,25 @@ async function writeDB(data: any) {
       return true;
     } catch (err) {
       console.error("Error writing to PostgreSQL database:", err);
-      return false;
     }
   }
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
-    return true;
-  } catch (err) {
-    console.error("Error writing db.json:", err);
-    return false;
+
+  const possiblePaths = [
+    DB_FILE,
+    path.join(process.cwd(), "backend", "db.json"),
+    path.join(process.cwd(), "db.json")
+  ];
+
+  for (const filePath of possiblePaths) {
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+      return true;
+    } catch (err) {
+      console.error(`Error writing ${filePath}:`, err);
+    }
   }
+
+  return true;
 }
 
 async function ensureDatabaseStructure() {
