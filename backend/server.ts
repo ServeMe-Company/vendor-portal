@@ -121,10 +121,18 @@ const DB_FILE = path.join(__dirname, "db.json");
 const DATABASE_URL = process.env.DATABASE_URL;
 
 let pool: Pool | null = null;
-if (DATABASE_URL) {
+if (DATABASE_URL && typeof DATABASE_URL === "string" && DATABASE_URL.trim() !== "") {
+  let connectionString = DATABASE_URL.trim().replace(/^["']|["']$/g, '');
+  if (!connectionString.startsWith("postgres://") && !connectionString.startsWith("postgresql://")) {
+    if (connectionString.startsWith("//")) {
+      connectionString = "postgresql:" + connectionString;
+    } else {
+      connectionString = "postgresql://" + connectionString;
+    }
+  }
   console.log("Initializing PostgreSQL connection pool...");
   pool = new Pool({
-    connectionString: DATABASE_URL,
+    connectionString,
     ssl: {
       rejectUnauthorized: false
     }
