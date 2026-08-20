@@ -5,7 +5,6 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import QRCode from "qrcode";
-import { createServer as createViteServer } from "vite";
 import { Pool } from "pg";
 import { fileURLToPath } from "url";
 
@@ -2690,6 +2689,7 @@ async function startServer() {
   // Setup Vite development server or production static serving
   if (process.env.NODE_ENV !== "production") {
     console.log("Starting server in DEVELOPMENT mode with Vite middleware...");
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       configFile: path.join(process.cwd(), "vite.config.ts"),
       server: { middlewareMode: true },
