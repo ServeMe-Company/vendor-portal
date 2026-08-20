@@ -266,10 +266,14 @@ export default function TableManagement() {
         throw new Error('Failed to load QR details');
       }
       const data = await res.json();
+      let finalTargetUrl = data.targetUrl || '';
+      if (finalTargetUrl.includes('localhost') || finalTargetUrl.includes('127.0.0.1')) {
+        finalTargetUrl = finalTargetUrl.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://qr-menu.serveme.in');
+      }
       setQrModalData({
         table,
         qrDataUrl: data.qrDataUrl,
-        targetUrl: data.targetUrl,
+        targetUrl: finalTargetUrl,
         loading: false
       });
     } catch (err: any) {

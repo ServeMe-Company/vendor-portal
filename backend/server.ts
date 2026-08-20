@@ -1756,9 +1756,11 @@ async function startServer() {
           });
         }
 
+        const envUrl = (process.env.QR_MENU_URL || "").trim();
         const qrMenuBaseUrl = (
-          process.env.QR_MENU_URL ||
-          "https://qr-menu.serveme.in"
+          envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")
+            ? envUrl
+            : "https://qr-menu.serveme.in"
         ).replace(/\/+$/, "");
 
         const targetUrl =
@@ -1811,9 +1813,11 @@ async function startServer() {
           });
         }
 
+        const envUrl = (process.env.QR_MENU_URL || "").trim();
         const qrMenuBaseUrl = (
-          process.env.QR_MENU_URL ||
-          "https://qr-menu.serveme.in"
+          envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")
+            ? envUrl
+            : "https://qr-menu.serveme.in"
         ).replace(/\/+$/, "");
 
         const targetUrl =
@@ -1864,8 +1868,11 @@ async function startServer() {
           name: "ServeMe Restaurant",
         };
 
+        const envUrl = (process.env.QR_MENU_URL || "").trim();
         const qrMenuBaseUrl = (
-          process.env.QR_MENU_URL || "https://qr-menu.serveme.in"
+          envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")
+            ? envUrl
+            : "https://qr-menu.serveme.in"
         ).replace(/\/+$/, "");
 
         const targetUrl = `${qrMenuBaseUrl}/?qr=${encodeURIComponent(table.qrToken)}`;
