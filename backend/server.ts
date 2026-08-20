@@ -351,16 +351,15 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  // CORS for local Vite development
+  // CORS for local Vite development & production QR menu
   app.use(
     cors({
       origin: [
         "http://localhost:5173",
-        "http://localhost:5173",
         "http://localhost:5175",
         "http://127.0.0.1:5173",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5173",
+        "https://qr-menu.serveme.in",
+        "http://qr-menu.serveme.in",
       ],
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -1759,7 +1758,7 @@ async function startServer() {
 
         const qrMenuBaseUrl = (
           process.env.QR_MENU_URL ||
-          "http://localhost:5173"
+          "https://qr-menu.serveme.in"
         ).replace(/\/+$/, "");
 
         const targetUrl =
@@ -1814,7 +1813,7 @@ async function startServer() {
 
         const qrMenuBaseUrl = (
           process.env.QR_MENU_URL ||
-          "http://localhost:5173"
+          "https://qr-menu.serveme.in"
         ).replace(/\/+$/, "");
 
         const targetUrl =
@@ -1866,7 +1865,7 @@ async function startServer() {
         };
 
         const qrMenuBaseUrl = (
-          process.env.QR_MENU_URL || "http://localhost:5173"
+          process.env.QR_MENU_URL || "https://qr-menu.serveme.in"
         ).replace(/\/+$/, "");
 
         const targetUrl = `${qrMenuBaseUrl}/q/${encodeURIComponent(table.qrToken)}`;
