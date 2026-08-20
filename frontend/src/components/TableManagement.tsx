@@ -275,7 +275,7 @@ export default function TableManagement() {
     } catch (err: any) {
       console.error('QR fetch error:', err);
       // Fallback preview
-      const qrMenuBaseUrl = 'https://qr-menu.serveme.in';
+      const qrMenuBaseUrl = window.location.origin;
       const targetUrl = `${qrMenuBaseUrl}/q/${table.qrToken}`;
       setQrModalData({
         table,
