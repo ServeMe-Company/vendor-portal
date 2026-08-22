@@ -10,7 +10,44 @@ export const INITIAL_PRODUCTS: MenuItem[] = [
     description: 'Classic tomato sauce, fresh mozzarella, fresh basil, and extra virgin olive oil.',
     stock: 25,
     status: 'Available',
-    popular: true
+    popular: true,
+    hasCustomization: true,
+    allowKitchenInstructions: true,
+    customizationGroups: [
+      {
+        id: 'grp-size',
+        title: 'SELECT SIZE / PORTION',
+        required: true,
+        type: 'single',
+        options: [
+          { id: 'opt-reg', name: 'Regular', price: 0 },
+          { id: 'opt-med', name: 'Medium (+₹40)', price: 40 },
+          { id: 'opt-lrg', name: 'Large (+₹80)', price: 80 }
+        ]
+      },
+      {
+        id: 'grp-spice',
+        title: 'SPICE LEVEL',
+        required: false,
+        type: 'single',
+        options: [
+          { id: 'opt-mild', name: '🌶️ Mild', price: 0 },
+          { id: 'opt-sp-med', name: '🌶️🌶️ Medium', price: 0 },
+          { id: 'opt-spicy', name: '🌶️🌶️🌶️ Spicy', price: 0 }
+        ]
+      },
+      {
+        id: 'grp-addons',
+        title: 'EXTRA ADD-ONS',
+        required: false,
+        type: 'multiple',
+        options: [
+          { id: 'opt-chz', name: 'Extra Cheese', price: 40 },
+          { id: 'opt-dip', name: 'Special Dip / Sauce', price: 25 },
+          { id: 'opt-veggies', name: 'Extra Toppings / Veggies', price: 35 }
+        ]
+      }
+    ]
   },
   {
     id: 'prod-2',

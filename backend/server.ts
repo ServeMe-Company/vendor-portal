@@ -351,16 +351,25 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  // CORS for local Vite development & production QR menu
+  const allowedOrigins = [
+    "https://serveme.in",
+    "https://www.serveme.in",
+    "https://vendor.serveme.in",
+    "https://kds.serveme.in",
+    "https://menu.serveme.in",
+    "https://qr-menu.serveme.in",
+    "http://serveme.in",
+    "http://vendor.serveme.in",
+    "http://kds.serveme.in",
+    "http://menu.serveme.in",
+    "http://localhost:5173",
+    "http://localhost:5175",
+    "http://127.0.0.1:5173"
+  ];
+
   app.use(
     cors({
-      origin: [
-        "http://localhost:5173",
-        "http://localhost:5175",
-        "http://127.0.0.1:5173",
-        "https://qr-menu.serveme.in",
-        "http://qr-menu.serveme.in",
-      ],
+      origin: allowedOrigins,
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-Idempotency-Key"],

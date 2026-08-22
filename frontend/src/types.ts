@@ -1,3 +1,17 @@
+export interface CustomizationOption {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface CustomizationGroup {
+  id: string;
+  title: string;
+  required: boolean;
+  type: 'single' | 'multiple';
+  options: CustomizationOption[];
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -15,6 +29,9 @@ export interface MenuItem {
   popular?: boolean;
   featured?: boolean;
   displayOrder?: number;
+  hasCustomization?: boolean;
+  customizationGroups?: CustomizationGroup[];
+  allowKitchenInstructions?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

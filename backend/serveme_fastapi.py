@@ -9,7 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime, Text, Enum, select
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-import stripe
+try:
+    import stripe
+except ImportError:
+    stripe = None
 
 # 1. Config and Logger Setup
 logging.basicConfig(level=logging.INFO)
@@ -17,9 +20,14 @@ logger = logging.getLogger("ServeMe-POS")
 
 STRIPE_API_KEY = os.getenv("STRIPE_SECRET_KEY", "sk_test_mock")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_mock")
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://user:password@localhost/serveme_db")
+DATABASE_URL = os.getenv("FASTAPI_DATABASE_URL", os.getenv("DATABASE_URL", "sqlite:///./serveme.db"))
 
-stripe.api_key = STRIPE_API_KEY
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+if stripe:
+    stripe.api_key = STRIPE_API_KEY
+
 
 # 2. FastAPI App Setup
 app = FastAPI(
@@ -35,6 +43,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+def read_root():
+    return {
+        "status": "online",
+        "service": "ServeMe Ordering Engine (FastAPI)",
+        "docs_url": "/docs",
+        "redoc_url": "/redoc"
+    }
+
 
 # 3. Database Connection and ORM Setup
 engine = create_engine(
